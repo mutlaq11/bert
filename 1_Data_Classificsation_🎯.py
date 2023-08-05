@@ -45,8 +45,20 @@ def TranslateAndSegment(df, complaint_column):
             translated_text = translate(row[complaint_column], 'en')
             sentences = sent_tokenize(translated_text)
             for sentence in sentences:
+                # Tokenize the sentence
+                tokens = tokenizer.tokenize(sentence)
+
+                # Check if any token is unknown
+                if tokenizer.unk_token in tokens:
+                    # Handle unknown token
+                    special_token = "<UNK>"
+                    tokens = [special_token if token == tokenizer.unk_token else token for token in tokens]
+
+                # Convert tokens back to segmented text
+                segmented_text = " ".join(tokens)
+
                 new_row = row.copy()
-                new_row[complaint_column] = sentence
+                new_row[complaint_column] = segmented_text
                 all_rows.append(new_row)
     return pd.DataFrame(all_rows)
 
@@ -103,15 +115,10 @@ if uploaded_file is not None:
             # Convert DataFrame to Excel and enable downloading
             output = io.BytesIO()
             excel_writer = pd.ExcelWriter(output, engine='openpyxl')
-            segmented_df.to_excel(excel_writer, sheet_name='Sheet1', index=False)
-
+            segmented_df.toExcel(excel_writer, index=False, sheet_name='Sheet1')
             excel_writer.save()
             excel_data = output.getvalue()
-            st.download_button(
-                label="Download data as Excel",
-                data=excel_data,
-                file_name='classified_data.xlsx',
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
+            st.download_button("Download Classification Results", data=excel_data, file_name="classification_results.xlsx",
+                               mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         else:
-            st.warning("Please upload a file and select a column to classify.")
+            st.warning("Please select a column.")
