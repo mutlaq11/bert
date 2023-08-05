@@ -5,6 +5,7 @@ import nltk
 from nltk.tokenize import sent_tokenize
 from mtranslate import translate
 import io
+import psutil
 
 #-----------------------------------------------------------------------------
 hide_st_style = """
@@ -62,6 +63,11 @@ def TranslateAndSegment(df, complaint_column):
                 all_rows.append(new_row)
     return pd.DataFrame(all_rows)
 
+# Function to get memory usage
+def get_memory_usage():
+    process = psutil.Process()
+    return process.memory_info().rss / (1024 * 1024)  # Memory usage in MB
+
 # Streamlit application
 
 # Upload file
@@ -95,6 +101,12 @@ if uploaded_file is not None:
             progress_bar = st.progress(0)
             progress_text = st.empty()
             for i, row in segmented_df.iterrows():
+```python
+                # Monitor memory usage
+                memory_usage = get_memory_usage()
+                if memory_usage > 1000:  # 1000 MB = 1 GB
+                    st.warning("Memory usage exceeded 1 GB.")
+
                 sequence_to_classify = row['Segmented Text']
                 output_sentiment = classifier(sequence_to_classify, candidate_labels=labels_sentiment,
                                               multi_label=False)
@@ -115,7 +127,7 @@ if uploaded_file is not None:
             # Convert DataFrame to Excel and enable downloading
             output = io.BytesIO()
             excel_writer = pd.ExcelWriter(output, engine='openpyxl')
-            segmented_df.toExcel(excel_writer, index=False, sheet_name='Sheet1')
+            segmented_df.to_excel(excel_writer, index=False, sheet_name='Sheet1')
             excel_writer.save()
             excel_data = output.getvalue()
             st.download_button("Download Classification Results", data=excel_data, file_name="classification_results.xlsx",
